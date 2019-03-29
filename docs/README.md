@@ -7,6 +7,11 @@ Implemented by Sondre Aleksander Bergum, Martin Madsen and Filip Schjerven.
 [Project description](https://www.overleaf.com/read/xgqfysbtbcpd) (Project 3)  
 [Provided code](https://drive.google.com/file/d/1hKVc4METKj2aQy4yC3xnP8Dwc4zEd-Cn/view)  
 
+Litterature:  
+https://arxiv.org/pdf/1704.07911.pdf [comment]: <Explaining How a Deep Neural Network Trained with End-to-End Learning Steers a Car>  
+https://arxiv.org/pdf/1604.07316.pdf [comment]: <End to End Learning for Self-Driving Cars>  
+
+
 Other resources:  
 https://blog.coast.ai/training-a-deep-learning-model-to-steer-a-car-in-99-lines-of-code-ba94e0456e6a
 
