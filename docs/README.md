@@ -10,6 +10,13 @@ Implemented by Sondre Aleksander Bergum, Martin Madsen and Filip Schjerven.
 Litterature:  
 https://arxiv.org/pdf/1704.07911.pdf <Explaining How a Deep Neural Network Trained with End-to-End Learning Steers a Car>  
 https://arxiv.org/pdf/1604.07316.pdf <End to End Learning for Self-Driving Cars>  
+https://arxiv.org/pdf/1710.03804.pdf <End-to-End Deep Learning for Steering Autonomous
+Vehicles Considering Temporal Dependencies>  
+https://selfdrivingcars.mit.edu/ <MIT 6.S094: Deep Learning for Self-Driving Cars>  
+http://cs231n.stanford.edu/reports/2017/pdfs/626.pdf <Self-Driving Car Steering Angle Prediction Based on Image Recognition>  
+https://arxiv.org/pdf/1608.01230.pdf + https://github.com/commaai/research <Learning a Driving Simulator>  
+https://devblogs.nvidia.com/explaining-deep-learning-self-driving-car/ <Explaining How End-to-End Deep Learning Steers a Self-Driving Car>  
+https://devblogs.nvidia.com/deep-learning-self-driving-cars/ <End-to-End Deep Learning for Self-Driving Cars>  
 
 
 Other resources:  
