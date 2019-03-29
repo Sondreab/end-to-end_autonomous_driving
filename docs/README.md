@@ -8,8 +8,8 @@ Implemented by Sondre Aleksander Bergum, Martin Madsen and Filip Schjerven.
 [Provided code](https://drive.google.com/file/d/1hKVc4METKj2aQy4yC3xnP8Dwc4zEd-Cn/view)  
 
 Litterature:  
-https://arxiv.org/pdf/1704.07911.pdf [comment]: <Explaining How a Deep Neural Network Trained with End-to-End Learning Steers a Car>  
-https://arxiv.org/pdf/1604.07316.pdf [comment]: <End to End Learning for Self-Driving Cars>  
+https://arxiv.org/pdf/1704.07911.pdf <Explaining How a Deep Neural Network Trained with End-to-End Learning Steers a Car>  
+https://arxiv.org/pdf/1604.07316.pdf <End to End Learning for Self-Driving Cars>  
 
 
 Other resources:  
