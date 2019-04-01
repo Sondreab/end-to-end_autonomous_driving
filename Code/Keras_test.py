@@ -38,7 +38,7 @@ def model(load, saved_model, shape):
     model.add(Dropout(0.5))
     model.add(Dense(1, activation='sigmoid'))
     
-    optim = optimizers.Adam()
+    optim = optimizers.Adam(lr = 0.01, decay = 1e-5)
     model.compile(loss="mse", optimizer=optim)
     return model
 
@@ -76,7 +76,7 @@ def _generator(batch_size, X, y, shape, path):
         yield np.array(batch_x), np.array(batch_y)
               
 def train(path,log):
-    shape = (40,60,3)
+    shape = (50,75,3)
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
 
@@ -89,8 +89,8 @@ def train(path,log):
     net.fit_generator(generator        = _generator(64, X, y, shape, path),
                       validation_data  = _generator(10,X_val, y_val, shape, path),
                       validation_steps = 10, 
-                      epochs = 5, steps_per_epoch=int(len(front)/5))
-    net.save('save/testmodel.h5')
+                      epochs = 1, steps_per_epoch=int(len(front)/5))
+    net.save('testmodel.h5')
     
 
 
