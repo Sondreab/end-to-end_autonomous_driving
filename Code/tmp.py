@@ -9,14 +9,12 @@ import os
 
 def fix_path_names():
     """Run when in /Code folder. Fixes only file if all paths are messed up. """
-    path = os.getcwd().split("/")[:-1] + ["driving_log.csv"]
-    path_str = "/".join(path) 
+    path = os.getcwd().split(os.sep)[:-1] + ["driving_log.csv"]
+    path_str = (os.sep).join(path) 
     data = pd.read_csv(path_str, header=None) 
-    if len(data[0][0].split("\\")) < 3:
-        return 0
-    front = ["/".join(x.split("\\")[-2:]) for x in data[0]]
-    left = ["/".join(x.split("\\")[-2:]) for x in data[1]]
-    right = ["/".join(x.split("\\")[-2:]) for x in data[2]]
+    front = [(os.sep).join(x.split(os.sep)[-2:]) for x in data[0]]
+    left = [(os.sep).join(x.split(os.sep)[-2:]) for x in data[1]]
+    right = [(os.sep).join(x.split(os.sep)[-2:]) for x in data[2]]
     data[0] = front
     data[1] = left
     data[2] = right

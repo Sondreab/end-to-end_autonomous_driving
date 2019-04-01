@@ -22,19 +22,19 @@ def model(load, saved_model, shape):
     
     "Dobbelt opp med parametere funker men grisetregt"
     model = Sequential()
-    model.add(Conv2D(16, (3, 3), activation="relu", input_shape=shape))
+    model.add(Conv2D(32, (3, 3), activation="relu", input_shape=shape))
     model.add(MaxPooling2D())
     #model.add(BatchNormalization(axis=1))
-    model.add(Conv2D(32, (3, 3), activation="relu"))
+    model.add(Conv2D(64, (3, 3), activation="relu"))
     model.add(MaxPooling2D())
     #model.add(BatchNormalization(axis=1))
-    model.add(Conv2D(64,(3, 3), activation="relu"))
+    model.add(Conv2D(128,(3, 3), activation="relu"))
     model.add(MaxPooling2D())
     #model.add(BatchNormalization(axis=1))
     model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
+    model.add(Dense(256, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(64, activation='relu'))
+    model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
     model.add(Dense(1, activation='sigmoid'))
     
@@ -71,33 +71,33 @@ def _generator(batch_size, X, y, shape, path):
         idx     = np.random.randint(0,len(X), min([batch_size,len(X)]))
         batch_y = y[idx]
         for i in idx:
-            batch_x.append(image_handling(path + "/" + X[i], shape=shape))
+            batch_x.append(image_handling(path + os.sep + X[i], shape=shape))
         
         yield np.array(batch_x), np.array(batch_y)
               
 def train(path,log):
-    shape = (50,75,3)
+    shape = (75,320,3)
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
 
     train, validate, test = split_data(len(front))
     net  = model(load=False, saved_model=None, shape=shape)
-    X, y = front[train], np.divide(angle[train],50) + 0.5
+    X, y = front[train], np.divide(angle[train],2) + 0.5
     
-    X_val, y_val = front[validate], np.divide(angle[validate],50) + 0.5
+    X_val, y_val = front[validate], np.divide(angle[validate],2) + 0.5
     
     net.fit_generator(generator        = _generator(64, X, y, shape, path),
                       validation_data  = _generator(10,X_val, y_val, shape, path),
                       validation_steps = 10, 
-                      epochs = 1, steps_per_epoch=int(len(front)/5))
+                      epochs = 3, steps_per_epoch=10)
     net.save('testmodel.h5')
     
 
 
 if __name__ == "__main__":
-    path = os.getcwd().split("/")[:-1]
+    path = os.getcwd().split(os.sep)[:-1]
     log = path + ["driving_log.csv"]
-    train("/".join(path), "/".join(log))
+    train((os.sep).join(path), (os.sep).join(log))
 
 
 
