@@ -15,7 +15,6 @@ from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.preprocessing.image import img_to_array, load_img
 import numpy as np
 import os
-from matplotlib import pyplot as plt
 
 def model(load, saved_model, shape):
     
@@ -98,7 +97,6 @@ def _generator(batch_size, X, y, shape, path, proportion):
         batch_y   = []
         idx, flip = sample_idx(batch_size, y, proportion) 
         for i, j in zip(idx,flip):
-            print(X[i])
             x, angle = image_handling(path + os.sep + X[i], y[i], j, shape=shape)
             batch_x.append(x)
             batch_y.append(angle)
@@ -121,7 +119,7 @@ def train(path,log):
     net.fit_generator(generator        = _generator(64, X, y, shape, path, proportion),
                       validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
                       validation_steps = 20, 
-                      epochs = 2, steps_per_epoch=100)
+                      epochs = 5, steps_per_epoch=100)
     net.save('testmodel3.h5')
     
 
