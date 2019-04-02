@@ -36,7 +36,7 @@ def model(load, saved_model, shape):
     model.add(Dropout(0.5))
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(1, activation='linear'))
+    model.add(Dense(1, activation=own_activation))
     
     optim = optimizers.Adam()
     model.compile(loss="mse", optimizer=optim)
@@ -83,11 +83,11 @@ def sample_idx(batch_size, y, proportion):
     while i < batch_size:
         candidate = np.random.randint(0,data_num,1)[0]
         #Image of driving forward
-        if y[candidate] == 0 and np.random.ranf(1) > proportion and np.random.ranf(1) > 0.5:
+        if y[candidate] == 0 and np.random.ranf(1) > proportion:
             idx[i] = candidate
             i+=1
         #Image of turning
-        elif y[candidate] < 0 and np.random.ranf(1) < proportion:
+        elif np.random.ranf(1) < proportion:
             idx[i]  = candidate
             flip[i] = np.random.binomial(1,0.5)
             i+=1
@@ -98,15 +98,15 @@ def _generator(batch_size, X, y, shape, path, proportion):
     while True:
         batch_x   = []
         batch_y   = []
-        idx, flip = sample_idx(batch_size, y, proportion)
-        #print("prop: ",proportion)
+        idx, flip = sample_idx(batch_size, y, proportion) 
         for i, flip_bool in zip(idx,flip):
             x, angle = image_handling(path + os.sep + X[i], y[i], flip_bool, shape=shape)
             batch_x.append(x)
             batch_y.append(angle)
-        #print("Left: ", np.sum(np.less(batch_y,0)))
-        #print("Forward: ", np.sum(np.equal(batch_y,0)))
-        #print("Right: ", np.sum(np.greater(batch_y, 0)))
+        print(batch_size)
+        print("Left: ", np.divide(np.sum(np.less(batch_y,0)),1))
+        print("Forward: ",np.divide(np.sum(np.equal(batch_y,0)),batch_size))
+        print("Right: ",np.divide(np.sum(np.greater(batch_y, 0)),batch_size))
         yield np.array(batch_x), np.array(batch_y)
               
             
@@ -115,7 +115,7 @@ def train(path,log):
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
 
-    proportion = np.divide(np.sum(angle == 0),len(angle))
+    proportion = np.sum(angle == 0)
     
     train, validate = split_data(len(front))
     net  = model(load=False, saved_model=None, shape=shape)
