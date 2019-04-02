@@ -8,7 +8,7 @@ seed(1)
 from tensorflow import set_random_seed
 set_random_seed(2)
 
-from keras import optimizers, backend
+from keras import optimizers
 from keras.layers import Dense, Flatten, Dropout, BatchNormalization
 from keras.models import load_model, Sequential
 from keras.layers.convolutional import Conv2D, MaxPooling2D     
@@ -41,10 +41,6 @@ def model(load, saved_model, shape):
     optim = optimizers.Adam()
     model.compile(loss="mse", optimizer=optim)
     return model
-
-def own_activation(x):
-    return backend.sigmoid(x)*2 - 1
-
 
 def flip_axis(img,axis):
     if axis == 1:
@@ -83,11 +79,11 @@ def sample_idx(batch_size, y, proportion):
     while i < batch_size:
         candidate = np.random.randint(0,data_num,1)[0]
         #Image of driving forward
-        if y[candidate] == 0 and np.random.ranf(1) > proportion and np.random.ranf(1) > 0.5:
+        if y[candidate] == 0 and np.random.ranf(1) > proportion:
             idx[i] = candidate
             i+=1
         #Image of turning
-        elif y[candidate] < 0 and np.random.ranf(1) < proportion:
+        elif np.random.ranf(1) < proportion:
             idx[i]  = candidate
             flip[i] = np.random.binomial(1,0.5)
             i+=1
@@ -98,15 +94,14 @@ def _generator(batch_size, X, y, shape, path, proportion):
     while True:
         batch_x   = []
         batch_y   = []
-        idx, flip = sample_idx(batch_size, y, proportion)
-        #print("prop: ",proportion)
+        idx, flip = sample_idx(batch_size, y, proportion) 
         for i, flip_bool in zip(idx,flip):
             x, angle = image_handling(path + os.sep + X[i], y[i], flip_bool, shape=shape)
             batch_x.append(x)
             batch_y.append(angle)
-        #print("Left: ", np.sum(np.less(batch_y,0)))
-        #print("Forward: ", np.sum(np.equal(batch_y,0)))
-        #print("Right: ", np.sum(np.greater(batch_y, 0)))
+        print("Left: ",np.sum(batch_y < 0))
+        print("Forward: ",np.sum(batch_y == 0))
+        print("Right: ",np.sum(batch_y > 0))
         yield np.array(batch_x), np.array(batch_y)
               
             
@@ -115,7 +110,7 @@ def train(path,log):
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
 
-    proportion = np.divide(np.sum(angle == 0),len(angle))
+    proportion = np.sum(angle == 0)
     
     train, validate = split_data(len(front))
     net  = model(load=False, saved_model=None, shape=shape)
@@ -124,9 +119,13 @@ def train(path,log):
     X_val, y_val = front[validate], angle[validate]
     
     net.fit_generator(generator        = _generator(256, X, y, shape, path, proportion),
-                      validation_data  = _generator(32, X_val, y_val, shape, path, proportion),
-                      validation_steps = 10, 
-                      epochs = 5, steps_per_epoch=100)
+                      validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
+                      validation_steps = 20, 
+                      epochs = 5, steps_per_epoch=50)
+    test_idx, _ = sample_idx(30, y, proportion) 
+    pred = net.predict(X[test_idx])
+    for i, j in zip(pred, y[test_idx])
+        print("Pred: ", i, " True: ", j)
     net.save('testmodel3.h5')
     
 
