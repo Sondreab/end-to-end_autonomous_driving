@@ -69,7 +69,6 @@ def split_data(nr_pts):
     tr = int(np.floor(nr_pts*0.8))
     train    = idx[:tr]
     validate = idx[tr:]
-    
     return train, validate
 
 def sample_idx(batch_size, y, proportion):
@@ -96,10 +95,13 @@ def _generator(batch_size, X, y, shape, path, proportion):
         batch_x   = []
         batch_y   = []
         idx, flip = sample_idx(batch_size, y, proportion) 
-        for i, j in zip(idx,flip):
-            x, angle = image_handling(path + os.sep + X[i], y[i], j, shape=shape)
+        for i, flip_bool in zip(idx,flip):
+            x, angle = image_handling(path + os.sep + X[i], y[i], flip_bool, shape=shape)
             batch_x.append(x)
             batch_y.append(angle)
+        print("Left: ",np.sum(batch_y < 0))
+        print("Forward: ",np.sum(batch_y == 0))
+        print("Right: ",np.sum(batch_y > 0))
         yield np.array(batch_x), np.array(batch_y)
               
             
