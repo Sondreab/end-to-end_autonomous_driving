@@ -8,7 +8,7 @@ seed(1)
 from tensorflow import set_random_seed
 set_random_seed(2)
 
-from keras import optimizers
+from keras import optimizers, backend
 from keras.layers import Dense, Flatten, Dropout, BatchNormalization
 from keras.models import load_model, Sequential
 from keras.layers.convolutional import Conv2D, MaxPooling2D     
@@ -36,11 +36,15 @@ def model(load, saved_model, shape):
     model.add(Dropout(0.5))
     model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.5))
-    model.add(Dense(1, activation='linear'))
+    model.add(Dense(1, activation=own_activation))
     
     optim = optimizers.Adam()
     model.compile(loss="mse", optimizer=optim)
     return model
+
+def own_activation(x):
+    return backend.sigmoid(x)*2 - 1
+
 
 def flip_axis(img,axis):
     if axis == 1:
