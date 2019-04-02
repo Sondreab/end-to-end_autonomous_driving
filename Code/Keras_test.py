@@ -124,7 +124,7 @@ def train(path,log):
                       epochs = 5, steps_per_epoch=50)
     test_idx, _ = sample_idx(30, y, proportion) 
     pred = net.predict(X[test_idx])
-    for i, j in zip(pred, y[test_idx])
+    for i, j in zip(pred, y[test_idx]):
         print("Pred: ", i, " True: ", j)
     net.save('testmodel3.h5')
     
