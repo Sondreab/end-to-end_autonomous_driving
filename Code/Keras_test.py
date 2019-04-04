@@ -53,10 +53,9 @@ def flip_axis(img,axis):
 
 def crop(img):
     shape = img.shape
-    new = np.zeros(shape)
     for i in np.arange(int(shape[0]/3)):
-        new[i,:,:] = 0
-    return new
+        img[i,:,:] = 0
+    return img
 
 # load image into known format.
 def image_handling(path, steering_angle, flip, shape, crop_bool=True):
@@ -67,8 +66,9 @@ def image_handling(path, steering_angle, flip, shape, crop_bool=True):
     if flip: 
         img = flip_axis(img, 1)
         steering_angle = -steering_angle
-            
-    return crop(img,crop_bool), steering_angle
+    if crop_bool:
+        img = crop(img)
+    return img, steering_angle
     
 def split_data(nr_pts):
     idx = np.arange(nr_pts)
@@ -144,12 +144,12 @@ if __name__ == "__main__":
     path = os.getcwd().split(os.sep)[:-1]
     log = path + ["driving_log.csv"]
     img = path + ["IMG"]
-    #train((os.sep).join(img), (os.sep).join(log))
-    front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
-    shape = (75,320,3)
-    img, _ = image_handling(path + os.sep + front[0], 1,0, shape=shape)
-    fig = plt.figure()
-    plt.imshow(img)
-    fig.savefig("test.jpg")
+    train((os.sep).join(img), (os.sep).join(log))
+    #front, left, right = np.loadtxt((os.sep).join(log), delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
+    #shape = (75,320,3)
+    #img, _ = image_handling((os.sep).join(img) + os.sep + front[0], 1,0, shape=shape)
+    #fig = plt.figure()
+    #plt.imshow(img)
+    #fig.savefig("test.jpg")
 
 
