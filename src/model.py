@@ -2,6 +2,8 @@
 # coding: utf-8
 
 # In[41]:
+import numpy as np
+import os
 
 from numpy.random import seed
 seed(1)
@@ -10,39 +12,50 @@ set_random_seed(2)
 
 from keras import optimizers
 from keras import models
-from keras.layers import Dense, Flatten, Dropout, BatchNormalization 
 from keras.models import load_model, Sequential
-from keras.layers.convolutional import Conv2D, MaxPooling2D, Cropping2D
+from keras.layers import Dense, Flatten, Dropout, Convolution2D, Lambda
 from keras.preprocessing.image import img_to_array, load_img
 from matplotlib import pyplot as plt
-import numpy as np
-import os
 
-def model(load, saved_model, shape):
+
+def model(load, saved_model, shape=(66,200,3)):
     
     if load and saved_model: return load_model(saved_model)
     
-    "Dobbelt opp med parametere funker men grisetregt"
+
     model = Sequential()
-    model.add(Cropping2D(cropping=((int(shape[0]/3.0), 0),(0, 0)), input_shape=shape))
-    model.add(Conv2D(32, (3, 3), activation="relu", input_shape=shape))
-    model.add(MaxPooling2D())
-    model.add(BatchNormalization(axis=2))
-    model.add(Conv2D(64, (3, 3), activation="relu"))
-    model.add(MaxPooling2D())
-    model.add(BatchNormalization(axis=2))
-    model.add(Conv2D(128,(3, 3), activation="relu"))
-    model.add(MaxPooling2D())
-    model.add(BatchNormalization(axis=2))
-    model.add(Flatten())
-    model.add(Dense(256, activation='relu'))
+
+    #input normalization layer
+    model.add(Lambda(lambda x: x/127.5 - 1, input_shape=shape))
+    # 3 @ 66x200
+    model.add(Convolution2D(filters=24, kernel_size=(5,5), strides=(2,2), 
+                    data_format="channels_last", activation="elu"))
+    # 24 @ 31x98
+    model.add(Convolution2D(filters=36, kernel_size=(5,5), strides=(2,2), 
+                    data_format="channels_last", activation="elu"))
+    # 36 @ 14x47
+    model.add(Convolution2D(filters=48, kernel_size=(5,5), strides=(2,2), 
+                    data_format="channels_last", activation="elu"))
+    # 48 @ 5x22
+    model.add(Convolution2D(filters=64, kernel_size=(3,3), 
+                    data_format="channels_last", activation="elu"))
+    # 64 @ 3x20
+    model.add(Convolution2D(filters=64, kernel_size=(3,3), 
+                    data_format="channels_last", activation="elu"))
+    # 64 @ 1x18
+    model.add(Flatten()) # 1164 neurons
+
+    model.add(Dense(100, activation="elu"))
     model.add(Dropout(0.5))
-    model.add(Dense(128, activation='relu'))
+    model.add(Dense(50, activation="elu"))
     model.add(Dropout(0.5))
-    model.add(Dense(1, activation='linear'))
+    model.add(Dense(10, activation="linear"))
+
+    model.add(Dense(1, activation="tanh"))
     
     optim = optimizers.Adam()
     model.compile(loss="mse", optimizer=optim)
+
     return model
 
 
@@ -105,11 +118,13 @@ def flip_axis(img,axis):
 
 
 # load image into known format.
+
 def image_handling(path, steering_angle, shape, flip=True):
     """ Image handling """
     image = load_img(path, target_size=shape)
         
-    img = img_to_array(image)/255.0
+    img = img_to_array(image) #/255.0 artefact, this is done by lambda layer
+
     if flip: 
         img = flip_axis(img, 1)
         steering_angle = -steering_angle
@@ -159,16 +174,17 @@ def _generator(batch_size, X, y, shape, path, proportion):
               
             
 def train(path,log):
-    shape = (75,320,3) #320
+
+    shape = (66,200,3)
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
-
 
     proportion = np.sum(angle == 0)/float(len(angle))
     
     train, validate = split_data(len(front))
-    net  = model(load=False, saved_model='testmodel3.h5', shape=shape)
+    net = model(load=False, saved_model=None, shape=shape)
     X, y = front[train], angle[train]
+
     #print("y_len: ", len(y))
     #rint("proportion: ", proportion)
     X_val, y_val = front[validate], angle[validate]
