@@ -80,7 +80,7 @@ def visualization_model(model, img_tensor):
 
     layer_names = []
     #Visualizing the conv layers:
-    for layer in model.layers[1:9]:
+    for layer in model.layers[1:6]:
         layer_names.append(layer.name)
 
     #change these to change the number of channels to visualize
