@@ -4,7 +4,7 @@
 # In[41]:
 import numpy as np
 import os
-
+import cv2
 from numpy.random import seed
 seed(1)
 from tensorflow import set_random_seed
@@ -13,10 +13,11 @@ set_random_seed(2)
 from keras import optimizers
 from keras import models
 from keras.models import load_model, Sequential
-from keras.layers import Dense, Flatten, Dropout, Convolution2D, Lambda
+from keras.layers import Dense, Flatten, Dropout, Convolution2D, Lambda, Cropping2D
 from keras.preprocessing.image import img_to_array, load_img
 from matplotlib import pyplot as plt
-
+from PIL import Image
+ 
 
 def model(load, saved_model, shape=(66,200,3)):
     
@@ -24,9 +25,12 @@ def model(load, saved_model, shape=(66,200,3)):
     
 
     model = Sequential()
+    #input normalization layer # Not same as in drive.py? /127.5 - 1.0
+    model.add(Lambda(lambda x: x, input_shape=shape))
 
-    #input normalization layer
-    model.add(Lambda(lambda x: x/127.5 - 1, input_shape=shape))
+    # Cropping layer to remove scenery from image
+    model.add(Cropping2D( ((int(shape[0]/3.0), 0), (0,0)) ))
+    
     # 3 @ 66x200
     model.add(Convolution2D(filters=24, kernel_size=(5,5), strides=(2,2), 
                     data_format="channels_last", activation="elu"))
@@ -40,8 +44,8 @@ def model(load, saved_model, shape=(66,200,3)):
     model.add(Convolution2D(filters=64, kernel_size=(3,3), 
                     data_format="channels_last", activation="elu"))
     # 64 @ 3x20
-    model.add(Convolution2D(filters=64, kernel_size=(3,3), 
-                    data_format="channels_last", activation="elu"))
+    #model.add(Convolution2D(filters=64, kernel_size=(3,3), 
+    #               data_format="channels_last", activation="elu"))
     # 64 @ 1x18
     model.add(Flatten()) # 1164 neurons
 
@@ -65,7 +69,12 @@ def visualization_model(model, img_tensor):
     path = path + ['docs'] + ['plots']
     path = (os.sep).join(path)
 
-
+    #input_img = img_tensor[0,:,:,:]
+    #print(img_tensor.shape)
+    #rgb_input = cv2.cvtColor(input_img, cv2.COLOR_HSV2RGB)
+    #fig = plt.figure()
+    #plt.imshow(rgb_input) 
+    #fig.savefig(path + os.sep + "input_img")
 
     os.makedirs(path, exist_ok=True) #location of the plots
     layer_outputs = [layer.output for layer in model.layers[:]]
@@ -74,9 +83,13 @@ def visualization_model(model, img_tensor):
     activations = activation_model.predict(img_tensor)
 
     #Special case for the first image
+    img = activations[0][0, :, :, :]
+    print(img.shape)
+    rgb_img = cv2.cvtColor(img, cv2.COLOR_HSV2RGB)
     fig = plt.figure()
-    plt.imshow(activations[0][0, :, :, :]) 
-    fig.savefig(path + os.sep + "Cropped_input_img")
+    plt.imshow(rgb_img) 
+    fig.savefig(path + os.sep + "first_layer")
+
 
     layer_names = []
     #Visualizing the conv layers:
@@ -88,7 +101,7 @@ def visualization_model(model, img_tensor):
     row_size=5
 
     
-    for layer_name, layer_activation in zip(layer_names, activations[1:]):
+    for layer_name, layer_activation in zip(layer_names, activations[0:]):
         print(layer_activation.shape)
         print(layer_name)
 
@@ -121,10 +134,12 @@ def flip_axis(img,axis):
 
 def image_handling(path, steering_angle, shape, flip=True):
     """ Image handling """
-    image = load_img(path, target_size=shape)
-        
-    img = img_to_array(image) #/255.0 artefact, this is done by lambda layer
-
+    img = Image.open(path)
+    img = img.resize((shape[1],shape[0]))
+    #To HSV; same as drive.py
+    img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2HSV)
+    img = (img/255)-0.5
+    
     if flip: 
         img = flip_axis(img, 1)
         steering_angle = -steering_angle
@@ -175,12 +190,12 @@ def _generator(batch_size, X, y, shape, path, proportion):
             
 def train(path,log):
 
-    shape = (66,200,3)
+    shape = (75,320,3)
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
 
     proportion = np.sum(angle == 0)/float(len(angle))
-    
+    print('prop: ', proportion)
     train, validate = split_data(len(front))
     net = model(load=False, saved_model=None, shape=shape)
     X, y = front[train], angle[train]
@@ -189,10 +204,10 @@ def train(path,log):
     #rint("proportion: ", proportion)
     X_val, y_val = front[validate], angle[validate]
     
-    net.fit_generator(generator        = _generator(256, X, y, shape, path, proportion),
+    net.fit_generator(generator        = _generator(128, X, y, shape, path, proportion),
                       validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
                       validation_steps = 20, 
-                      epochs = 2, steps_per_epoch=50)
+                      epochs = 5, steps_per_epoch=50)
     
     
     test_idx, _ = sample_idx(50, y, proportion) 
@@ -204,6 +219,10 @@ def train(path,log):
     net.save('testmodel3.h5')
 
     img_vis, _ = image_handling(path + os.sep + X[1], 0, shape)
+    
+    #fig = plt.figure()
+    #plt.imshow(rgb_img)
+    #plt.show()
     
     img_vis = np.reshape(img_vis, (1,) + shape)
     
