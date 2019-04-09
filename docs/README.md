@@ -21,7 +21,7 @@ https://devblogs.nvidia.com/deep-learning-self-driving-cars/ <End-to-End Deep Le
 
 Other resources:  
 https://blog.coast.ai/training-a-deep-learning-model-to-steer-a-car-in-99-lines-of-code-ba94e0456e6a
-https://github.com/tech-rules/DAVE2-Keras
+https://github.com/tech-rules/DAVE2-Keras  
 https://github.com/pszczesnowicz/SDC-P3-Behavioral-Cloning/blob/master/model.py
 
 syntax:  
