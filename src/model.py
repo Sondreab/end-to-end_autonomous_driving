@@ -34,25 +34,25 @@ def model(load, saved_model, shape=(66,200,3)):
     
     # 3 @ 66x200
     model.add(Convolution2D(filters=24, kernel_size=(5,5), strides=(2,2), 
-                    data_format="channels_last", activation="elu"))
+                    data_format="channels_last", activation="relu"))
     # 24 @ 31x98
     model.add(Convolution2D(filters=36, kernel_size=(5,5), strides=(2,2), 
-                    data_format="channels_last", activation="elu"))
+                    data_format="channels_last", activation="relu"))
     # 36 @ 14x47
     model.add(Convolution2D(filters=48, kernel_size=(5,5), strides=(2,2), 
-                    data_format="channels_last", activation="elu"))
+                    data_format="channels_last", activation="relu"))
     # 48 @ 5x22
     model.add(Convolution2D(filters=64, kernel_size=(3,3), 
-                    data_format="channels_last", activation="elu"))
+                    data_format="channels_last", activation="relu"))
     # 64 @ 3x20
     model.add(Convolution2D(filters=64, kernel_size=(3,3), 
-                    data_format="channels_last", activation="elu"))
+                    data_format="channels_last", activation="relu"))
     # 64 @ 1x18
     model.add(Flatten()) # 1164 neurons
 
-    model.add(Dense(100, activation="elu"))
+    model.add(Dense(100, activation="relu"))
     model.add(Dropout(0.5))
-    model.add(Dense(50, activation="elu"))
+    model.add(Dense(50, activation="relu"))
     model.add(Dropout(0.5))
     model.add(Dense(10, activation="linear"))
 
@@ -122,6 +122,30 @@ def visualization_model(model, img_tensor):
 
 
 
+
+
+# load image into known format.
+
+def image_handling(path, steering_angle, shape):
+    """ Image handling """
+    image = Image.open(path)
+    image_array = np.asarray(image)
+    image_array = image_array[65:len(image_array)-20, :, :]
+    image_array = image_array[...,::-1]
+
+    """
+    if np.random.random() < 0.5:
+        image_array = flip_axis(image_array, 1)
+        steering_angle = -steering_angle
+    """
+
+    #To HSV; same as drive.py
+    img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
+    img = (img/255)-0.5
+
+    return img, steering_angle
+
+
 def flip_axis(img,axis):
     if axis == 1:
         new = np.zeros(img.shape)
@@ -129,25 +153,6 @@ def flip_axis(img,axis):
         for i in np.arange(dim):
             new[:,i,:] = img[:,dim-i,:]
     return new
-
-
-# load image into known format.
-
-def image_handling(path, steering_angle, shape, flip=False):
-    """ Image handling """
-    image = Image.open(path)
-    image_array = np.asarray(image)
-    image_array = image_array[65:len(image_array)-20, :, :]
-    image_array = image_array[...,::-1]
-    
-    #To HSV; same as drive.py
-    img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
-    img = (img/255)-0.5
-    
-    if flip: 
-        img = flip_axis(img, 1)
-        steering_angle = -steering_angle
-    return img, steering_angle
     
 def split_data(nr_pts):
     idx = np.arange(nr_pts)
@@ -161,34 +166,33 @@ def split_data(nr_pts):
 def sample_idx(batch_size, y, proportion):
     i    = 0
     idx  = [0]*batch_size
-    flip = [0]*batch_size
     data_num = len(y)
     while i < batch_size:
         candidate = np.random.randint(0,data_num,1)[0]
         #Image of driving forward
-        if y[candidate] == 0 and np.random.ranf(1) < (1-proportion)*0.5:
+        if y[candidate] == 0 and np.random.ranf(1) < (1-proportion)*0.33:
             idx[i] = candidate
             i+=1
         #Image of turning
         elif y[candidate] != 0 and np.random.ranf(1) < proportion:
             idx[i]  = candidate
-            flip[i] = np.random.binomial(1,0.5)
             i+=1
-    return idx, flip
+    return idx
 
 #Change if augmentation is performed
 def _generator(batch_size, X, y, shape, path, proportion):
     while True:
         batch_x   = []
         batch_y   = []
-        idx, flip = sample_idx(batch_size, y, proportion) 
-        for i, flip_bool in zip(idx,flip):
-            x, angle = image_handling(path + os.sep + X[i], y[i], shape, flip=False)
+        idx = sample_idx(batch_size, y, proportion) 
+        for i in idx:
+            x, angle = image_handling(path + os.sep + X[i], y[i], shape)
             batch_x.append(x)
             batch_y.append(angle)
         #print("Left: ",np.sum(np.less(batch_y,0)))
         #print("Forward: ",np.sum(np.equal(batch_y,0)))
         #print("Right: ",np.sum(np.greater(batch_y,0)))
+
         yield np.array(batch_x), np.array(batch_y)
               
             
@@ -204,6 +208,9 @@ def train(path,log):
     net = model(load=False, saved_model=None, shape=shape)
     X, y = front[train], angle[train]
 
+    fig = plt.figure()
+    plt.hist(y, bins=[-1.1, -0.005, 0.005, 1.1])
+    plt.show()
     #print("y_len: ", len(y))
     #rint("proportion: ", proportion)
     X_val, y_val = front[validate], angle[validate]
@@ -214,19 +221,19 @@ def train(path,log):
     net.fit_generator(generator        = _generator(128, X, y, shape, path, proportion),
                       validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
                       validation_steps = 20, 
-                      epochs = 5, steps_per_epoch=50,
+                      epochs = 10, steps_per_epoch=50,
                       callbacks=[checkpoint])
     
     
-    test_idx, flip = sample_idx(50, y, proportion) 
+    test_idx = sample_idx(50, y, proportion) 
     for i in test_idx:
-        img, _ = image_handling(path + os.sep + X[i], 0, shape, flip=False)
+        img, _ = image_handling(path + os.sep + X[i], 0, shape)
         img = np.reshape(img, (1,) + shape)
         pred = net.predict(img)
         print("Pred: ", pred, " True: ", y[i])
     
 
-    img_vis, _ = image_handling(path + os.sep + X[1], 0, shape, flip=False)
+    img_vis, _ = image_handling(path + os.sep + X[1], 0, shape)
     
     #fig = plt.figure()
     #plt.imshow(rgb_img)
@@ -246,12 +253,7 @@ if __name__ == "__main__":
     print(log)
     print(path)
     net = train((os.sep).join(img), (os.sep).join(log))
-    #front, left, right = np.loadtxt((os.sep).join(log), delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
-    #shape = (75,320,3)
-    #img, _ = image_handling((os.sep).join(img) + os.sep + front[0], 1,0, shape=shape)
-    #fig = plt.figure()
-    #plt.imshow(img)
-    #fig.savefig("test.jpg")
+ 
 
 
 
