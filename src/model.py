@@ -15,6 +15,7 @@ from keras import models
 from keras.models import load_model, Sequential
 from keras.layers import Dense, Flatten, Dropout, Convolution2D, Lambda, Cropping2D
 from keras.preprocessing.image import img_to_array, load_img
+from keras.callbacks import ModelCheckpoint
 from matplotlib import pyplot as plt
 from PIL import Image
  
@@ -29,7 +30,7 @@ def model(load, saved_model, shape=(66,200,3)):
     model.add(Lambda(lambda x: x, input_shape=shape))
 
     # Cropping layer to remove scenery from image
-    model.add(Cropping2D( ((int(shape[0]/3.0), 0), (0,0)) ))
+    #model.add(Cropping2D( ((int(shape[0]/3.0), 0), (0,0)) ))
     
     # 3 @ 66x200
     model.add(Convolution2D(filters=24, kernel_size=(5,5), strides=(2,2), 
@@ -44,8 +45,8 @@ def model(load, saved_model, shape=(66,200,3)):
     model.add(Convolution2D(filters=64, kernel_size=(3,3), 
                     data_format="channels_last", activation="elu"))
     # 64 @ 3x20
-    #model.add(Convolution2D(filters=64, kernel_size=(3,3), 
-    #               data_format="channels_last", activation="elu"))
+    model.add(Convolution2D(filters=64, kernel_size=(3,3), 
+                    data_format="channels_last", activation="elu"))
     # 64 @ 1x18
     model.add(Flatten()) # 1164 neurons
 
@@ -132,12 +133,15 @@ def flip_axis(img,axis):
 
 # load image into known format.
 
-def image_handling(path, steering_angle, shape, flip=True):
+def image_handling(path, steering_angle, shape, flip=False):
     """ Image handling """
-    img = Image.open(path)
-    img = img.resize((shape[1],shape[0]))
+    image = Image.open(path)
+    image_array = np.asarray(image)
+    image_array = image_array[65:len(image_array)-20, :, :]
+    image_array = image_array[...,::-1]
+    
     #To HSV; same as drive.py
-    img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2HSV)
+    img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
     img = (img/255)-0.5
     
     if flip: 
@@ -179,7 +183,7 @@ def _generator(batch_size, X, y, shape, path, proportion):
         batch_y   = []
         idx, flip = sample_idx(batch_size, y, proportion) 
         for i, flip_bool in zip(idx,flip):
-            x, angle = image_handling(path + os.sep + X[i], y[i], shape)
+            x, angle = image_handling(path + os.sep + X[i], y[i], shape, flip=False)
             batch_x.append(x)
             batch_y.append(angle)
         #print("Left: ",np.sum(np.less(batch_y,0)))
@@ -204,21 +208,25 @@ def train(path,log):
     #rint("proportion: ", proportion)
     X_val, y_val = front[validate], angle[validate]
     
+    #Saving the best epoch
+    checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True)
+
     net.fit_generator(generator        = _generator(128, X, y, shape, path, proportion),
                       validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
                       validation_steps = 20, 
-                      epochs = 5, steps_per_epoch=50)
+                      epochs = 5, steps_per_epoch=50,
+                      callbacks=[checkpoint])
     
     
-    test_idx, _ = sample_idx(50, y, proportion) 
+    test_idx, flip = sample_idx(50, y, proportion) 
     for i in test_idx:
-        img, _ = image_handling(path + os.sep + X[i], 0, shape)
+        img, _ = image_handling(path + os.sep + X[i], 0, shape, flip=False)
         img = np.reshape(img, (1,) + shape)
         pred = net.predict(img)
         print("Pred: ", pred, " True: ", y[i])
-    net.save('testmodel3.h5')
+    
 
-    img_vis, _ = image_handling(path + os.sep + X[1], 0, shape)
+    img_vis, _ = image_handling(path + os.sep + X[1], 0, shape, flip=False)
     
     #fig = plt.figure()
     #plt.imshow(rgb_img)
