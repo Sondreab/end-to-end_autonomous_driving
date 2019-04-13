@@ -133,11 +133,11 @@ def image_handling(path, steering_angle, shape):
     image_array = image_array[65:len(image_array)-20, :, :]
     image_array = image_array[...,::-1]
 
-    """
+    
     if np.random.random() < 0.5:
-        image_array = flip_axis(image_array, 1)
+        image_array = image_array[:,::-1,:] #flip_axis(image_array, 1)
         steering_angle = -steering_angle
-    """
+    
 
     #To HSV; same as drive.py
     img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
@@ -148,7 +148,7 @@ def image_handling(path, steering_angle, shape):
 
 def flip_axis(img,axis):
     if axis == 1:
-        new = np.zeros(img.shape)
+        new = np.copy(img)
         dim = img.shape[1]-1
         for i in np.arange(dim):
             new[:,i,:] = img[:,dim-i,:]
