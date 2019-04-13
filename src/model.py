@@ -16,6 +16,7 @@ from keras.models import load_model, Sequential
 from keras.layers import Dense, Flatten, Dropout, Convolution2D, Lambda, Cropping2D
 from keras.preprocessing.image import img_to_array, load_img
 from keras.callbacks import ModelCheckpoint
+from keras.backend import tf
 from matplotlib import pyplot as plt
 from PIL import Image
  
@@ -27,7 +28,7 @@ def model(load, saved_model, shape=(66,200,3)):
 
     model = Sequential()
     #input normalization layer # Not same as in drive.py? /127.5 - 1.0
-    model.add(Lambda(lambda x: x, input_shape=shape))
+    model.add(Lambda(lambda image: tf.image.resize_images(image, (66,200) ), input_shape=shape))
 
     # Cropping layer to remove scenery from image
     #model.add(Cropping2D( ((int(shape[0]/3.0), 0), (0,0)) ))
@@ -137,7 +138,8 @@ def image_handling(path, steering_angle, shape):
     if np.random.random() < 0.5:
         image_array = image_array[:,::-1,:] #flip_axis(image_array, 1)
         steering_angle = -steering_angle
-    
+
+
 
     #To HSV; same as drive.py
     img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
@@ -170,11 +172,11 @@ def sample_idx(batch_size, y, proportion):
     while i < batch_size:
         candidate = np.random.randint(0,data_num,1)[0]
         #Image of driving forward
-        if y[candidate] == 0 and np.random.ranf(1) < (1-proportion)*0.33:
+        if abs(y[candidate]) < 0.01 and np.random.ranf(1) < (1-proportion)*0.33:
             idx[i] = candidate
             i+=1
         #Image of turning
-        elif y[candidate] != 0 and np.random.ranf(1) < proportion:
+        elif abs(y[candidate]) >= 0.01 and np.random.ranf(1) < proportion:
             idx[i]  = candidate
             i+=1
     return idx
