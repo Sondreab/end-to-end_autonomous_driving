@@ -1,0 +1,3 @@
+-c menpo opencv
+-c conda-forge flask-socketio
+-c conda-forge eventlet
