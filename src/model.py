@@ -172,11 +172,11 @@ def sample_idx(batch_size, y, proportion):
     while i < batch_size:
         candidate = np.random.randint(0,data_num,1)[0]
         #Image of driving forward
-        if abs(y[candidate]) < 0.01 and np.random.ranf(1) < (1-proportion)*0.33:
+        if abs(y[candidate]) <= 0.05 and np.random.ranf(1) < (1-proportion)*0.33:
             idx[i] = candidate
             i+=1
         #Image of turning
-        elif abs(y[candidate]) >= 0.01 and np.random.ranf(1) < proportion:
+        elif abs(y[candidate]) > 0.05 and np.random.ranf(1) < proportion:
             idx[i]  = candidate
             i+=1
     return idx
@@ -204,15 +204,15 @@ def train(path,log):
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
 
-    proportion = np.sum(angle == 0)/float(len(angle))
+    proportion = np.sum(abs(angle) <= 0.05)/float(len(angle))
     print('prop: ', proportion)
     train, validate = split_data(len(front))
     net = model(load=False, saved_model=None, shape=shape)
     X, y = front[train], angle[train]
 
     fig = plt.figure()
-    plt.hist(y, bins=[-1.1, -0.005, 0.005, 1.1])
-    plt.show()
+    plt.hist(y, bins=[-1.1, -0.8, -0.5, -0.2,  -0.05, 0.05, 0.2, 0.5, 0.8, 1.1])
+    fig.savefig('training_data_histogram')
     #print("y_len: ", len(y))
     #rint("proportion: ", proportion)
     X_val, y_val = front[validate], angle[validate]
@@ -220,7 +220,7 @@ def train(path,log):
     #Saving the best epoch
     checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True)
 
-    net.fit_generator(generator        = _generator(128, X, y, shape, path, proportion),
+    net.fit_generator(generator        = _generator(64, X, y, shape, path, proportion),
                       validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
                       validation_steps = 20, 
                       epochs = 10, steps_per_epoch=50,
@@ -250,8 +250,8 @@ def train(path,log):
 
 if __name__ == "__main__":
     path = os.getcwd().split(os.sep)[:-1]
-    log = path + ["driving_log.csv"]
-    img = path + ["IMG"]
+    log = path + ["driving_log_track1.csv"]
+    img = path + ["IMG_track1"]
     print(log)
     print(path)
     net = train((os.sep).join(img), (os.sep).join(log))
