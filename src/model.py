@@ -66,7 +66,11 @@ def model(load, saved_model, shape=(66,200,3)):
 
 
 def visualization_model(model, img_tensor):
-    
+
+    img_test = add_shadow(img_tensor)
+    plt.imshow(img_test)
+    plt.show()
+
     path = os.getcwd().split(os.sep)[:-1]
     path = path + ['docs'] + ['plots']
     path = (os.sep).join(path)
@@ -139,6 +143,9 @@ def image_handling(path, steering_angle, shape):
         image_array = image_array[:,::-1,:] #flip_axis(image_array, 1)
         steering_angle = -steering_angle
 
+    if np.random.random() < 0.2:
+        img = add_shadow(img)
+
 
 
     #To HSV; same as drive.py
@@ -147,6 +154,16 @@ def image_handling(path, steering_angle, shape):
 
     return img, steering_angle
 
+def add_shadow(img):
+    x_vertices = [round(np.random.random()*img.shape[2]), round(np.random.random()*img.shape[2])]
+    x_min = min(x_vertices)
+    x_max = max(x_vertices)
+    y_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
+    y_min = min(y_vertices)
+    y_max = max(y_vertices)
+    poly = np.array( [[[y_min, x_min],[y_min, x_max],[y_max, x_min],[y_max,x_max]]], dtype=np.int32 )
+    cv2.fillPoly(img, poly, (img[...,0], img[..., 1], img[...,2]*np.random.random()))
+    return img
 
 def flip_axis(img,axis):
     if axis == 1:
@@ -220,12 +237,13 @@ def train(path,log):
     #Saving the best epoch
     checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True)
 
+    """
     net.fit_generator(generator        = _generator(64, X, y, shape, path, proportion),
                       validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
                       validation_steps = 20, 
                       epochs = 10, steps_per_epoch=50,
                       callbacks=[checkpoint])
-    
+    """
     
     test_idx = sample_idx(50, y, proportion) 
     for i in test_idx:
@@ -250,8 +268,8 @@ def train(path,log):
 
 if __name__ == "__main__":
     path = os.getcwd().split(os.sep)[:-1]
-    log = path + ["driving_log_track1.csv"]
-    img = path + ["IMG_track1"]
+    log = path + ["driving_log_track2.csv"]
+    img = path + ["IMG_track2"]
     print(log)
     print(path)
     net = train((os.sep).join(img), (os.sep).join(log))
