@@ -20,6 +20,7 @@ from keras.backend import tf
 from matplotlib import pyplot as plt
 from PIL import Image
  
+flip_images = False
 
 def model(load, saved_model, shape=(66,200,3)):
     
@@ -59,16 +60,13 @@ def model(load, saved_model, shape=(66,200,3)):
 
     model.add(Dense(1, activation="tanh"))
     
-    optim = optimizers.Adam()
+    optim = optimizers.Adam(lr=10e-4)
     model.compile(loss="mse", optimizer=optim)
 
     return model
 
 
 def visualization_model(model, img_tensor):
-
-    plt.imshow(img_tensor)
-    plt.show()
 
     path = os.getcwd().split(os.sep)[:-1]
     path = path + ['docs'] + ['plots']
@@ -138,53 +136,30 @@ def image_handling(path, steering_angle, shape):
     image_array = image_array[...,::-1]
 
     
-    if np.random.random() < 0.5:
+    if (np.random.random() < 0.5) and flip_images:
         image_array = image_array[:,::-1,:] #flip_axis(image_array, 1)
         steering_angle = -steering_angle
 
     
-
-
-
     #To HSV; same as drive.py
     img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
 
 
-    if True: #np.random.random() < 0.2:
-        print(img.shape)
-        print(type(img))
+    if np.random.random() < 0.2:
         x_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
-        x_min = min(x_vertices)
-        x_max = max(x_vertices)
+        x_min = min(min(x_vertices), 250)
+        x_max = max(max(x_vertices), x_min + 70)
         y_vertices = [round(np.random.random()*img.shape[0]), round(np.random.random()*img.shape[0])]
-        y_min = min(y_vertices)
-        y_max = max(y_vertices)
+        y_min = min(min(y_vertices), 55)
+        y_max = max(max(y_vertices), y_min + 20)
+        shade_scale = np.random.random()
         for y in range(y_min, y_max):
             for x in range(x_min, x_max):
-                img[y,x,2] = round(img[y,x,2]*np.random.random())
-        #image_array = add_shadow(image_array)
-        print(img.shape)
-        
+                img[y,x,2] = min(round(img[y,x,2]*shade_scale), 100)
+
     img = (img/255)-0.5
 
     return img, steering_angle
-
-def add_shadow(img):
-    
-    x_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
-    x_min = min(x_vertices)
-    x_max = max(x_vertices)
-    y_vertices = [round(np.random.random()*img.shape[0]), round(np.random.random()*img.shape[0])]
-    y_min = min(y_vertices)
-    y_max = max(y_vertices)
-    for y in range(y_min, y_max):
-        for x in range(x_min, x_max):
-            img[y,x,2] = round(img[y,x,2]*np.random.random())
-    """
-    poly = np.array( [[[y_min, x_min],[y_min, x_max],[y_max, x_min],[y_max,x_max]]], dtype=np.int32 )
-    cv2.fillPoly(img, poly, (..., round(64*np.random.random())))
-    """
-    return img
 
 def flip_axis(img,axis):
     if axis == 1:
@@ -258,13 +233,13 @@ def train(path,log):
     #Saving the best epoch
     checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True)
 
-    """
+    
     net.fit_generator(generator        = _generator(64, X, y, shape, path, proportion),
                       validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
                       validation_steps = 20, 
-                      epochs = 10, steps_per_epoch=50,
+                      epochs = 50, steps_per_epoch=50,
                       callbacks=[checkpoint])
-    """
+    
     
     test_idx = sample_idx(50, y, proportion) 
     for i in test_idx:
@@ -289,8 +264,8 @@ def train(path,log):
 
 if __name__ == "__main__":
     path = os.getcwd().split(os.sep)[:-1]
-    log = path + ["driving_log_track2.csv"]
-    img = path + ["IMG_track2"]
+    log = path + ["driving_log_both.csv"]
+    img = path + ["IMG"]
     print(log)
     print(path)
     net = train((os.sep).join(img), (os.sep).join(log))
