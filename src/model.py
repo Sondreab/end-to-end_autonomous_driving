@@ -67,8 +67,7 @@ def model(load, saved_model, shape=(66,200,3)):
 
 def visualization_model(model, img_tensor):
 
-    img_test = add_shadow(img_tensor)
-    plt.imshow(img_test)
+    plt.imshow(img_tensor)
     plt.show()
 
     path = os.getcwd().split(os.sep)[:-1]
@@ -143,26 +142,48 @@ def image_handling(path, steering_angle, shape):
         image_array = image_array[:,::-1,:] #flip_axis(image_array, 1)
         steering_angle = -steering_angle
 
-    if np.random.random() < 0.2:
-        img = add_shadow(img)
+    
 
 
 
     #To HSV; same as drive.py
     img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
+
+
+    if True: #np.random.random() < 0.2:
+        print(img.shape)
+        print(type(img))
+        x_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
+        x_min = min(x_vertices)
+        x_max = max(x_vertices)
+        y_vertices = [round(np.random.random()*img.shape[0]), round(np.random.random()*img.shape[0])]
+        y_min = min(y_vertices)
+        y_max = max(y_vertices)
+        for y in range(y_min, y_max):
+            for x in range(x_min, x_max):
+                img[y,x,2] = round(img[y,x,2]*np.random.random())
+        #image_array = add_shadow(image_array)
+        print(img.shape)
+        
     img = (img/255)-0.5
 
     return img, steering_angle
 
 def add_shadow(img):
-    x_vertices = [round(np.random.random()*img.shape[2]), round(np.random.random()*img.shape[2])]
+    
+    x_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
     x_min = min(x_vertices)
     x_max = max(x_vertices)
-    y_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
+    y_vertices = [round(np.random.random()*img.shape[0]), round(np.random.random()*img.shape[0])]
     y_min = min(y_vertices)
     y_max = max(y_vertices)
+    for y in range(y_min, y_max):
+        for x in range(x_min, x_max):
+            img[y,x,2] = round(img[y,x,2]*np.random.random())
+    """
     poly = np.array( [[[y_min, x_min],[y_min, x_max],[y_max, x_min],[y_max,x_max]]], dtype=np.int32 )
-    cv2.fillPoly(img, poly, (img[...,0], img[..., 1], img[...,2]*np.random.random()))
+    cv2.fillPoly(img, poly, (..., round(64*np.random.random())))
+    """
     return img
 
 def flip_axis(img,axis):
