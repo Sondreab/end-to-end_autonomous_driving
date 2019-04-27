@@ -20,18 +20,17 @@ from keras.backend import tf
 from matplotlib import pyplot as plt
 from PIL import Image
  
+flip_images = False
+shade_images = True
 
 def model(load, saved_model, shape=(66,200,3)):
     
-    if load and saved_model: return load_model(saved_model)
+    if load and saved_model: return load_model(saved_model, custom_objects={"tf": tf})
     
 
     model = Sequential()
-    #input normalization layer # Not same as in drive.py? /127.5 - 1.0
+    
     model.add(Lambda(lambda image: tf.image.resize_images(image, (66,200) ), input_shape=shape))
-
-    # Cropping layer to remove scenery from image
-    #model.add(Cropping2D( ((int(shape[0]/3.0), 0), (0,0)) ))
     
     # 3 @ 66x200
     model.add(Convolution2D(filters=24, kernel_size=(5,5), strides=(2,2), 
@@ -59,14 +58,14 @@ def model(load, saved_model, shape=(66,200,3)):
 
     model.add(Dense(1, activation="tanh"))
     
-    optim = optimizers.Adam()
+    optim = optimizers.Adam(lr=10e-4)
     model.compile(loss="mse", optimizer=optim)
 
     return model
 
 
 def visualization_model(model, img_tensor):
-    
+
     path = os.getcwd().split(os.sep)[:-1]
     path = path + ['docs'] + ['plots']
     path = (os.sep).join(path)
@@ -135,18 +134,30 @@ def image_handling(path, steering_angle, shape):
     image_array = image_array[...,::-1]
 
     
-    if np.random.random() < 0.5:
+    if ((np.random.random() < 0.5) and flip_images):
         image_array = image_array[:,::-1,:] #flip_axis(image_array, 1)
         steering_angle = -steering_angle
 
-
-
+    
     #To HSV; same as drive.py
     img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
+
+
+    if ((np.random.random() < 0.2) and shade_images):
+        x_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
+        x_min = min(min(x_vertices), 250)
+        x_max = max(max(x_vertices), x_min + 70)
+        y_vertices = [round(np.random.random()*img.shape[0]), round(np.random.random()*img.shape[0])]
+        y_min = min(min(y_vertices), 55)
+        y_max = max(max(y_vertices), y_min + 20)
+        shade_scale = np.random.random()
+        for y in range(y_min, y_max):
+            for x in range(x_min, x_max):
+                img[y,x,2] = min(round(img[y,x,2]*shade_scale), 100)
+
     img = (img/255)-0.5
 
     return img, steering_angle
-
 
 def flip_axis(img,axis):
     if axis == 1:
@@ -191,14 +202,14 @@ def _generator(batch_size, X, y, shape, path, proportion):
             x, angle = image_handling(path + os.sep + X[i], y[i], shape)
             batch_x.append(x)
             batch_y.append(angle)
-        #print("Left: ",np.sum(np.less(batch_y,0)))
-        #print("Forward: ",np.sum(np.equal(batch_y,0)))
-        #print("Right: ",np.sum(np.greater(batch_y,0)))
 
         yield np.array(batch_x), np.array(batch_y)
               
             
 def train(path,log):
+    load_pretrained_model = True
+    saved_model = 'model_trained_both.h5'
+
 
     shape = (75,320,3)
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
@@ -207,39 +218,31 @@ def train(path,log):
     proportion = np.sum(abs(angle) <= 0.05)/float(len(angle))
     print('prop: ', proportion)
     train, validate = split_data(len(front))
-    net = model(load=False, saved_model=None, shape=shape)
+    net = model(load=load_pretrained_model, saved_model=saved_model, shape=shape)
     X, y = front[train], angle[train]
 
     fig = plt.figure()
     plt.hist(y, bins=[-1.1, -0.8, -0.5, -0.2,  -0.05, 0.05, 0.2, 0.5, 0.8, 1.1])
     fig.savefig('training_data_histogram')
-    #print("y_len: ", len(y))
-    #rint("proportion: ", proportion)
+
     X_val, y_val = front[validate], angle[validate]
     
     #Saving the best epoch
     checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True)
 
-    net.fit_generator(generator        = _generator(64, X, y, shape, path, proportion),
-                      validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
-                      validation_steps = 20, 
-                      epochs = 10, steps_per_epoch=50,
-                      callbacks=[checkpoint])
+    net.summary()
+
+    if not load_pretrained_model:
+        net.fit_generator(generator        = _generator(64, X, y, shape, path, proportion),
+                        validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
+                        validation_steps = 20, 
+                        epochs = 50, steps_per_epoch=50,
+                        callbacks=[checkpoint])
+
     
-    
-    test_idx = sample_idx(50, y, proportion) 
-    for i in test_idx:
-        img, _ = image_handling(path + os.sep + X[i], 0, shape)
-        img = np.reshape(img, (1,) + shape)
-        pred = net.predict(img)
-        print("Pred: ", pred, " True: ", y[i])
     
 
     img_vis, _ = image_handling(path + os.sep + X[1], 0, shape)
-    
-    #fig = plt.figure()
-    #plt.imshow(rgb_img)
-    #plt.show()
     
     img_vis = np.reshape(img_vis, (1,) + shape)
     
@@ -250,15 +253,12 @@ def train(path,log):
 
 if __name__ == "__main__":
     path = os.getcwd().split(os.sep)[:-1]
-    log = path + ["driving_log_track1.csv"]
-    img = path + ["IMG_track1"]
+    log = path + ["driving_log_both.csv"] ## Path to csv file containing info on pictures used in training data
+    img = path + ["IMG_both"] ## Path to images listed in csv file.
     print(log)
     print(path)
     net = train((os.sep).join(img), (os.sep).join(log))
  
 
-
-
-    
 
 
