@@ -185,11 +185,11 @@ def sample_idx(batch_size, y, proportion):
     while i < batch_size:
         candidate = np.random.randint(0,data_num,1)[0]
         #Image of driving forward
-        if abs(y[candidate]) <= 0.05 and np.random.ranf(1) < (1-proportion)*0.33:
+        if abs(y[candidate]) <= 0.1 and np.random.ranf(1) < (1-proportion)*0.33:
             idx[i] = candidate
             i+=1
         #Image of turning
-        elif abs(y[candidate]) > 0.05 and np.random.ranf(1) < proportion:
+        elif abs(y[candidate]) > 0.1 and np.random.ranf(1) < proportion:
             idx[i]  = candidate
             i+=1
     return idx
@@ -217,7 +217,7 @@ def train(path,log):
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
 
-    proportion = np.sum(abs(angle) <= 0.05)/float(len(angle))
+    proportion = np.sum(abs(angle) <= 0.1)/float(len(angle))
     print('prop: ', proportion)
     train, validate = split_data(len(front))
     net = model(load=False, saved_model=None, shape=shape)
