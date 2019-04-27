@@ -19,6 +19,7 @@ from keras.callbacks import ModelCheckpoint
 from keras.backend import tf
 from matplotlib import pyplot as plt
 from PIL import Image
+import innvestigate
  
 
 def model(load, saved_model, shape=(66,200,3)):
@@ -28,14 +29,14 @@ def model(load, saved_model, shape=(66,200,3)):
 
     model = Sequential()
     #input normalization layer # Not same as in drive.py? /127.5 - 1.0
-    model.add(Lambda(lambda image: tf.image.resize_images(image, (66,200) ), input_shape=shape))
+    #model.add(Lambda(lambda image: tf.image.resize_images(image, (75,320), input_shape=shape)))
 
     # Cropping layer to remove scenery from image
     #model.add(Cropping2D( ((int(shape[0]/3.0), 0), (0,0)) ))
     
     # 3 @ 66x200
     model.add(Convolution2D(filters=24, kernel_size=(5,5), strides=(2,2), 
-                    data_format="channels_last", activation="relu"))
+                    data_format="channels_last", activation="relu", input_shape=shape))
     # 24 @ 31x98
     model.add(Convolution2D(filters=36, kernel_size=(5,5), strides=(2,2), 
                     data_format="channels_last", activation="relu"))
@@ -122,9 +123,7 @@ def visualization_model(model, img_tensor):
         fig.savefig(path + os.sep + layer_name)
 
 
-
-
-
+        
 # load image into known format.
 
 def image_handling(path, steering_angle, shape):
@@ -147,14 +146,6 @@ def image_handling(path, steering_angle, shape):
 
     return img, steering_angle
 
-
-def flip_axis(img,axis):
-    if axis == 1:
-        new = np.copy(img)
-        dim = img.shape[1]-1
-        for i in np.arange(dim):
-            new[:,i,:] = img[:,dim-i,:]
-    return new
     
 def split_data(nr_pts):
     idx = np.arange(nr_pts)
@@ -220,12 +211,20 @@ def train(path,log):
     #Saving the best epoch
     checkpoint = ModelCheckpoint('model.h5', monitor='val_loss', verbose=1, save_best_only=True)
 
-    net.fit_generator(generator        = _generator(64, X, y, shape, path, proportion),
-                      validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
-                      validation_steps = 20, 
-                      epochs = 10, steps_per_epoch=50,
-                      callbacks=[checkpoint])
+    history = net.fit_generator(generator = _generator(64, X, y, shape, path, proportion),
+                                            validation_data  = _generator(20, X_val, y_val, shape, path, proportion),
+                                            validation_steps = 20, 
+                                            epochs = 10, steps_per_epoch=50,
+                                            callbacks=[checkpoint])
     
+    fig = plt.figure()
+    l = plt.plot(history.history["loss"])
+    v = plt.plot(history.history["val_loss"])
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend((l, v), ('training', 'validation'))
+    plt.title("Loss v epoch")
+    fig.savefig("test.jpg")
     
     test_idx = sample_idx(50, y, proportion) 
     for i in test_idx:
@@ -243,22 +242,13 @@ def train(path,log):
     
     img_vis = np.reshape(img_vis, (1,) + shape)
     
-    visualization_model(net, img_vis)
+    #visualization_model(net, img_vis)
     return net
     
-
-
+    
 if __name__ == "__main__":
     path = os.getcwd().split(os.sep)[:-1]
     log = path + ["driving_log_track1.csv"]
-    img = path + ["IMG_track1"]
-    print(log)
-    print(path)
-    net = train((os.sep).join(img), (os.sep).join(log))
- 
-
-
-
+    img = path + ["IMG_track1"]    
     
-
-
+    net = train((os.sep).join(img), (os.sep).join(log))
