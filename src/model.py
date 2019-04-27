@@ -21,6 +21,7 @@ from matplotlib import pyplot as plt
 from PIL import Image
  
 flip_images = False
+shade_images = True
 
 def model(load, saved_model, shape=(66,200,3)):
     
@@ -60,7 +61,7 @@ def model(load, saved_model, shape=(66,200,3)):
 
     model.add(Dense(1, activation="tanh"))
     
-    optim = optimizers.Adam(lr=10e-4)
+    optim = optimizers.Adam(lr=10e-3)
     model.compile(loss="mse", optimizer=optim)
 
     return model
@@ -136,7 +137,7 @@ def image_handling(path, steering_angle, shape):
     image_array = image_array[...,::-1]
 
     
-    if (np.random.random() < 0.5) and flip_images:
+    if ((np.random.random() < 0.5) and flip_images):
         image_array = image_array[:,::-1,:] #flip_axis(image_array, 1)
         steering_angle = -steering_angle
 
@@ -145,7 +146,7 @@ def image_handling(path, steering_angle, shape):
     img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
 
 
-    if np.random.random() < 0.2:
+    if ((np.random.random() < 0.2) and shade_images):
         x_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
         x_min = min(min(x_vertices), 250)
         x_max = max(max(x_vertices), x_min + 70)
@@ -185,11 +186,11 @@ def sample_idx(batch_size, y, proportion):
     while i < batch_size:
         candidate = np.random.randint(0,data_num,1)[0]
         #Image of driving forward
-        if abs(y[candidate]) <= 0.1 and np.random.ranf(1) < (1-proportion)*0.33:
+        if abs(y[candidate]) <= 0.05 and np.random.ranf(1) < (1-proportion)*0.33:
             idx[i] = candidate
             i+=1
         #Image of turning
-        elif abs(y[candidate]) > 0.1 and np.random.ranf(1) < proportion:
+        elif abs(y[candidate]) > 0.05 and np.random.ranf(1) < proportion:
             idx[i]  = candidate
             i+=1
     return idx
@@ -217,7 +218,7 @@ def train(path,log):
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
 
-    proportion = np.sum(abs(angle) <= 0.1)/float(len(angle))
+    proportion = np.sum(abs(angle) <= 0.05)/float(len(angle))
     print('prop: ', proportion)
     train, validate = split_data(len(front))
     net = model(load=False, saved_model=None, shape=shape)
@@ -264,15 +265,12 @@ def train(path,log):
 
 if __name__ == "__main__":
     path = os.getcwd().split(os.sep)[:-1]
-    log = path + ["driving_log_both.csv"]
-    img = path + ["IMG"]
+    log = path + ["driving_log_both.csv"] ## Path to csv file containing info on pictures used in training data
+    img = path + ["IMG_both"] ## Path to images listed in csv file.
     print(log)
     print(path)
     net = train((os.sep).join(img), (os.sep).join(log))
  
 
-
-
-    
 
 
