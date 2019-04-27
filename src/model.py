@@ -21,7 +21,7 @@ from matplotlib import pyplot as plt
 from PIL import Image
  
 flip_images = False
-shade_images = True
+shade_images = False
 
 def model(load, saved_model, shape=(66,200,3)):
     
@@ -207,7 +207,7 @@ def _generator(batch_size, X, y, shape, path, proportion):
               
             
 def train(path,log):
-    load_pretrained_model = True
+    load_pretrained_model = False
     saved_model = 'model_trained_both.h5'
 
 
