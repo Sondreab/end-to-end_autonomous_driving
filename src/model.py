@@ -24,7 +24,8 @@ flip_images = False
 shade_images = False
 
 def model(load, saved_model, shape=(66,200,3)):
-    
+
+
     if load and saved_model: return load_model(saved_model, custom_objects={"tf": tf})
     
 
@@ -70,13 +71,6 @@ def visualization_model(model, img_tensor):
     path = path + ['docs'] + ['plots']
     path = (os.sep).join(path)
 
-    #input_img = img_tensor[0,:,:,:]
-    #print(img_tensor.shape)
-    #rgb_input = cv2.cvtColor(input_img, cv2.COLOR_HSV2RGB)
-    #fig = plt.figure()
-    #plt.imshow(rgb_input) 
-    #fig.savefig(path + os.sep + "input_img")
-
     os.makedirs(path, exist_ok=True) #location of the plots
     layer_outputs = [layer.output for layer in model.layers[:]]
     activation_model = models.Model(inputs=model.input, outputs=layer_outputs)
@@ -121,28 +115,27 @@ def visualization_model(model, img_tensor):
         fig.savefig(path + os.sep + layer_name)
 
 
-
-
-
-# load image into known format.
-
 def image_handling(path, steering_angle, shape):
-    """ Image handling """
+    """ Image handling 
+        Will load in the images listed in the supplied .csv file and do augmentation if
+        flags for it is set. Flags are set in top of this file.
+    
+    """
     image = Image.open(path)
     image_array = np.asarray(image)
     image_array = image_array[65:len(image_array)-20, :, :]
     image_array = image_array[...,::-1]
 
-    
+    #flip 50% og the images
     if ((np.random.random() < 0.5) and flip_images):
-        image_array = image_array[:,::-1,:] #flip_axis(image_array, 1)
+        image_array = image_array[:,::-1,:]
         steering_angle = -steering_angle
 
     
     #To HSV; same as drive.py
     img = cv2.cvtColor(np.array(image_array), cv2.COLOR_BGR2HSV)
 
-
+    # shade 20% of the images
     if ((np.random.random() < 0.2) and shade_images):
         x_vertices = [round(np.random.random()*img.shape[1]), round(np.random.random()*img.shape[1])]
         x_min = min(min(x_vertices), 250)
@@ -155,19 +148,16 @@ def image_handling(path, steering_angle, shape):
             for x in range(x_min, x_max):
                 img[y,x,2] = min(round(img[y,x,2]*shade_scale), 100)
 
+    #Normalize pixels
     img = (img/255)-0.5
 
     return img, steering_angle
 
-def flip_axis(img,axis):
-    if axis == 1:
-        new = np.copy(img)
-        dim = img.shape[1]-1
-        for i in np.arange(dim):
-            new[:,i,:] = img[:,dim-i,:]
-    return new
-    
+
 def split_data(nr_pts):
+    """
+    Split dataset into training and validation sets
+    """
     idx = np.arange(nr_pts)
     np.random.shuffle(idx)
     
@@ -177,6 +167,7 @@ def split_data(nr_pts):
     return train, validate
 
 def sample_idx(batch_size, y, proportion):
+
     i    = 0
     idx  = [0]*batch_size
     data_num = len(y)
@@ -192,8 +183,11 @@ def sample_idx(batch_size, y, proportion):
             i+=1
     return idx
 
-#Change if augmentation is performed
+
 def _generator(batch_size, X, y, shape, path, proportion):
+    """
+    Generator for data batches to avoid flooding RAM with the whole dataset
+    """
     while True:
         batch_x   = []
         batch_y   = []
@@ -207,13 +201,15 @@ def _generator(batch_size, X, y, shape, path, proportion):
               
             
 def train(path,log):
+
     load_pretrained_model = False
     saved_model = 'model_trained_both.h5'
 
-
     shape = (75,320,3)
+    # Load data from csv
     front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
     angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
+
 
     proportion = np.sum(abs(angle) <= 0.05)/float(len(angle))
     print('prop: ', proportion)
@@ -221,6 +217,7 @@ def train(path,log):
     net = model(load=load_pretrained_model, saved_model=saved_model, shape=shape)
     X, y = front[train], angle[train]
 
+    # Showing how many datapoints within each interval of steering angle
     fig = plt.figure()
     plt.hist(y, bins=[-1.1, -0.8, -0.5, -0.2,  -0.05, 0.05, 0.2, 0.5, 0.8, 1.1])
     fig.savefig('training_data_histogram')
@@ -240,8 +237,6 @@ def train(path,log):
                         callbacks=[checkpoint])
 
     
-    
-
     img_vis, _ = image_handling(path + os.sep + X[1], 0, shape)
     
     img_vis = np.reshape(img_vis, (1,) + shape)
