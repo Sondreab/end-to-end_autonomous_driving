@@ -210,7 +210,7 @@ def save_loss_plot(history):
     fig.savefig("loss.jpg")
     
 def activation_mapping(img_path, log, shape, load=False, saved_model=None, num_maps=5):
-    '''Not applicable for models with lambda layers, hence can  not be used on models we succeeded with.'''
+    '''Not applicable for models with lambda layers, hence can only be used on no_lambda_model.h5 of those supplies.'''
     seed(697)
     _, X, y, X_val, y_val, proportion = load_data(path,log)
     
