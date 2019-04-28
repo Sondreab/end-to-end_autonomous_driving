@@ -3,6 +3,15 @@ Final term project in the course TDT4265 - Computervision and deep learning of s
 
 Implemented by Sondre Aleksander Bergum, Martin Madsen and Filip Schjerven.
 
+## Instructions
+train a code by running model.py. By default the code saves it as "model.h5".
+
+To change what training data your model trains on you must manually change to the correct .csv and image folder in main, the default is to train a model on data from both tracks.
+
+We construct visualizations of layer activations from a random training-image after training a model that are saved in docs/plots.
+
+Run models by executing "python3 drive.py <modelname>" in terminal. Some good models are provided for you already. 
+
 ## Resources
 [Project description](https://www.overleaf.com/read/xgqfysbtbcpd) (Project 3)  
 [Provided code](https://drive.google.com/file/d/1hKVc4METKj2aQy4yC3xnP8Dwc4zEd-Cn/view)  
