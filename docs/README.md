@@ -24,9 +24,5 @@ https://blog.coast.ai/training-a-deep-learning-model-to-steer-a-car-in-99-lines-
 https://github.com/tech-rules/DAVE2-Keras  
 https://github.com/pszczesnowicz/SDC-P3-Behavioral-Cloning/blob/master/model.py
 
-syntax:  
-http://github.com - automatic!  
-[GitHub](http://github.com)
-
 ## License
 GPLv2
