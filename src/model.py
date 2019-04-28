@@ -19,7 +19,7 @@ from keras.callbacks import ModelCheckpoint
 from keras.backend import tf
 from matplotlib import pyplot as plt
 from PIL import Image
-import innvestigate
+#import innvestigate
  
 flip_images = False
 shade_images = False
@@ -285,9 +285,22 @@ def activation_mapping(img_path, log, shape, load=False, saved_model=None, num_m
         plt.close()
     
     
-def train(img_path, log, shape, load_pretrained_model):
+def train(path,log):
 
-    net, X, y, X_val, y_val, proportion = load_data(img_path, log, shape)
+    load_pretrained_model = False
+    saved_model = 'model_trained_both.h5'
+
+    shape = (75,320,3)
+    # Load data from csv
+    front, left, right = np.loadtxt(log, delimiter=",", usecols=[0,1,2], dtype="str", unpack=True)
+    angle, forward, backward, speed = np.loadtxt(log, delimiter=",", usecols=[3,4,5,6], unpack=True)
+
+
+    proportion = np.sum(abs(angle) <= 0.05)/float(len(angle))
+    print('prop: ', proportion)
+    train, validate = split_data(len(front))
+    net = model(load=load_pretrained_model, saved_model=saved_model, shape=shape)
+    X, y = front[train], angle[train]
 
     # Showing how many datapoints within each interval of steering angle
     fig = plt.figure()
@@ -334,5 +347,5 @@ if __name__ == "__main__":
     img_path = (os.sep).join(path + ["IMG_both"]) ## Path to images listed in csv file.
         
     
-    net = train(img_path, log,  shape=(66,200,3))
+    net = train(img_path, log)
     #activation_mapping(img_path=(os.sep).join(path + ["IMG_track2"]) , log=(os.sep).join(path + ["driving_log_track2.csv"]), shape=(75,320,3), load=True, saved_model='no_lambda_model.h5')
